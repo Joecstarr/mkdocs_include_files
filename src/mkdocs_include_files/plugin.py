@@ -1,6 +1,9 @@
 import fnmatch
 import os
 import shutil
+import sys
+from pathlib import Path
+from shutil import copyfile, copytree, rmtree
 
 from mkdocs.config import config_options
 from mkdocs.config.base import Config
@@ -12,7 +15,7 @@ log = get_plugin_logger(__name__)
 class IncludeFilesPluginConfig(Config):
     temp_location = config_options.Type(str, default="includes")
     search_syntax = config_options.Type(list, default=[])
-    search_paths = config_options.Type(str, default=".")
+    search_paths = config_options.Type(list, default=["."])
 
 
 class IncludeFilesPlugin(BasePlugin[IncludeFilesPluginConfig]):
@@ -20,25 +23,19 @@ class IncludeFilesPlugin(BasePlugin[IncludeFilesPluginConfig]):
         "runs before files are loaded so its a good time to copy the include files over"
 
         # get directory containing mkdocs.yml
-        mkdocs_yml_dir = os.path.dirname(config.config_file_path)
+        mkdocs_yml_dir = Path(config.config_file_path)
 
         # get path to include directory
-        include_dir = os.path.join(
-            config.docs_dir, config.plugins["include-files"].config.temp_location
-        )
-
-        # get path to search directory
-        search_dir = os.path.join(
-            mkdocs_yml_dir, config.plugins["include-files"].config.search_paths
+        include_dir = (
+            Path(config.docs_dir) / config.plugins["include-files"].config.temp_location
         )
 
         # search the search path for files that match the search syntax
-        for root, dirs, files in os.walk(search_dir):
-            for search_path in config.plugins["include-files"].config.search_syntax:
-                for filename in fnmatch.filter(files, search_path):
+        for search_pattern in config.plugins["include-files"].config.search_syntax:
+            for dir in config.plugins["include-files"].config.search_paths:
+                for filename in dir.glob(search_pattern):
                     # copy file to include dir
-                    src = os.path.join(root, filename)
-                    dst = os.path.join(include_dir, filename)
-                    log.info(f"Copying {src} to {dst}")
-                    os.makedirs(os.path.dirname(dst), exist_ok=True)
-                    shutil.copy2(src, dst)
+                    dest = include_dir.joinpath(filename.relative_to(dir))
+                    dest.parent.mkdir(parents=True, exist_ok=True)
+                    copyfile(dest, str(dest))
+                    log.info(f"Copying {filename} to {dest}")
