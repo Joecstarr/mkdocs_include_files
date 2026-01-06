@@ -39,3 +39,10 @@ class IncludeFilesPlugin(BasePlugin[IncludeFilesPluginConfig]):
                     dest.parent.mkdir(parents=True, exist_ok=True)
                     copyfile(filename, str(dest))
                     log.info(f"Copying {filename} to {dest}")
+
+    def on_post_build(self, config):
+        include_dir = (
+            Path(config.docs_dir) / config.plugins["include-files"].config.temp_location
+        )
+        rmtree(include_dir)
+        ...
