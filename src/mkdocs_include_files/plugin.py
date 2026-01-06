@@ -33,9 +33,9 @@ class IncludeFilesPlugin(BasePlugin[IncludeFilesPluginConfig]):
         # search the search path for files that match the search syntax
         for search_pattern in config.plugins["include-files"].config.search_syntax:
             for dir in config.plugins["include-files"].config.search_paths:
-                for filename in dir.glob(search_pattern):
+                for filename in Path(dir).glob(search_pattern):
                     # copy file to include dir
                     dest = include_dir.joinpath(filename.relative_to(dir))
                     dest.parent.mkdir(parents=True, exist_ok=True)
-                    copyfile(dest, str(dest))
+                    copyfile(filename, str(dest))
                     log.info(f"Copying {filename} to {dest}")
